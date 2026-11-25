@@ -1,12 +1,23 @@
-# fsi-cards-quarkus3 (stub)
+# fsi-cards-quarkus3
 
-Placeholder for the Lightspeed migration of `fsi-cards-was9-legacy`.
+Migrated target for `fsi-cards-was9-legacy` (WAS9 / Open Liberty → Red Hat Build of Quarkus 3).
 
-Suggested target shape (mirror `fsi-accounts-quarkus3` / `fsi-payments-quarkus3`):
+## What changed vs legacy
 
-- Replace JMS/MDB fraud processing with a Quarkus scheduler, reactive messaging, or an in-process async worker
-- `javax.*` → `jakarta.*`, CDI instead of EJB
-- Datasource via `application.properties` (no `jdbc/CardsDS` JNDI)
-- Drop `ibm-web-*` descriptors
+| Legacy (WAS9 / Liberty) | Migrated (Quarkus 3) |
+|-------------------------|----------------------|
+| `javax.*` + `@EJB` | `jakarta.*` + `@Inject` / CDI |
+| JNDI `jdbc/CardsDS` | Quarkus datasource + CDI `DataSource` |
+| `persistence.xml` + Hibernate 5 Criteria | `application.properties` + JPA Criteria API |
+| `@Type(type="yes_no")` | `YesNoConverter` |
+| JMS `FraudQueueProducer` + `FraudProcessorMDB` | In-process `FraudCheckWorker` (thread-pool async) |
+| `ibm-web-bnd.xml` / `ibm-web-ext.xml` | removed |
 
-MTA profile: source `websphere`, targets `quarkus` + `openjdk17`.
+## Run
+
+```bash
+./mvnw quarkus:dev
+```
+
+- UI: http://localhost:8089/
+- API: `GET/POST http://localhost:8089/api/auths`

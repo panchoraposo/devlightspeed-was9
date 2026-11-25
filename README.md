@@ -10,7 +10,17 @@ Standalone demo repo with **only** WebSphere/Open Liberty (WAS9) FSI apps so MTA
 | Cards (REST + JMS/MDB bait) | [`apps/fsi-cards-was9-legacy`](apps/fsi-cards-was9-legacy) |
 | KYC (JAX-WS/JAXB bait) | [`apps/fsi-kyc-was9-legacy`](apps/fsi-kyc-was9-legacy) |
 
-Pristine copies: [`source-apps/`](source-apps/). Quarkus reference stubs: [`migrated-apps/`](migrated-apps/).
+Pristine copies: [`source-apps/`](source-apps/).
+
+### Migrated (Red Hat Build of Quarkus 3)
+
+| App | Path | Dev port | Run |
+|-----|------|----------|-----|
+| Accounts | [`migrated-apps/fsi-accounts-quarkus3`](migrated-apps/fsi-accounts-quarkus3) | 8088 | `./mvnw quarkus:dev` |
+| Cards | [`migrated-apps/fsi-cards-quarkus3`](migrated-apps/fsi-cards-quarkus3) | 8089 | `./mvnw quarkus:dev` |
+| KYC | [`migrated-apps/fsi-kyc-quarkus3`](migrated-apps/fsi-kyc-quarkus3) | 8090 | `./mvnw quarkus:dev` |
+
+All three use platform `com.redhat.quarkus.platform:3.33.1.redhat-00006`. Cards replaces JMS/MDB with an in-process fraud worker; KYC replaces JAX-WS with REST + MicroProfile Config.
 
 ## Open in OpenShift Dev Spaces
 

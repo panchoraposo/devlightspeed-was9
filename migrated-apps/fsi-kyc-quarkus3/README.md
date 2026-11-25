@@ -1,12 +1,32 @@
-# fsi-kyc-quarkus3 (stub)
+# fsi-kyc-quarkus3
 
-Placeholder for the Lightspeed migration of `fsi-kyc-was9-legacy`.
+Migrated target for `fsi-kyc-was9-legacy` (WAS9 / Open Liberty → Red Hat Build of Quarkus 3).
 
-Suggested target shape:
+## What changed vs legacy
 
-- Replace JAX-WS SOAP with Quarkus REST (or Quarkus CXF only if SOAP must stay)
-- Move `/etc/fsi/kyc/scoring.properties` + system properties to MicroProfile Config
-- Remove MD5 audit handler; use a proper hashing / audit approach
-- Drop `ibm-web-*` descriptors
+| Legacy (WAS9 / Liberty) | Migrated (Quarkus 3) |
+|-------------------------|----------------------|
+| JAX-WS SOAP `KycService` / `KycServiceImpl` | Quarkus REST (`KycResource`) |
+| `javax.*` (JAX-WS, JAXB) | `jakarta.*` + Jackson JSON |
+| `/etc/fsi/kyc/scoring.properties` + system props (`LegacyKycConfig`) | MicroProfile Config `@ConfigProperty` (`fsi.kyc.scoring.mode`) |
+| SOAP handler MD5 audit (`KycAuditHandler`) | SHA-256 audit hashing (`KycAuditHasher`) |
+| Singleton `KycCaseStore.getInstance()` | CDI `@ApplicationScoped` `KycCaseStore` |
+| `ibm-web-bnd.xml` / `ibm-web-ext.xml` / `kyc-handlers.xml` | removed |
+| In-memory store (no JDBC) | unchanged — no Hibernate/PostgreSQL |
 
-MTA profile: source `websphere`, targets `quarkus` + `openjdk17`.
+## REST endpoints (SOAP mapping)
+
+| SOAP operation | HTTP | Path |
+|----------------|------|------|
+| `submitApplication` | `POST` | `/api/kyc/applications` (alias `/api/kyc/submit`) |
+| `getStatus` | `GET` | `/api/kyc/applications/{applicationId}` (alias `/api/kyc/status/{applicationId}`) |
+
+## Run
+
+```bash
+./mvnw quarkus:dev
+```
+
+- UI / API docs: http://localhost:8090/
+- Submit: `POST http://localhost:8090/api/kyc/applications`
+- Status: `GET http://localhost:8090/api/kyc/applications/{applicationId}`
