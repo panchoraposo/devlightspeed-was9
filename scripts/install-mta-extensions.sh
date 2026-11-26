@@ -161,6 +161,22 @@ install_one redhat mta-vscode-extension || true
 install_one redhat java "${JAVA_EXT_VERSION}" || true
 install_one redhat vscode-xml || true
 
+# vscode-java looks for an embedded runtime at <extension>/jre/<name>/bin/java
+# BEFORE settings. A symlink makes JDT LS use JDK 25 even when workspace
+# settings are untrusted or still point at the UDI Java 17.
+link_embedded_jdtls_jre() {
+  local jdk="${JDTLS_JDK_HOME:-/home/user/jdk-25}"
+  local dest="${EXT_ROOT}/redhat.java-${JAVA_EXT_VERSION}-universal"
+  if [[ ! -x "${jdk}/bin/java" || ! -d "${dest}" ]]; then
+    log "WARN: skip embedded JRE link (jdk=${jdk}, ext=${dest})"
+    return 0
+  fi
+  mkdir -p "${dest}/jre"
+  ln -sfn "${jdk}" "${dest}/jre/temurin-25"
+  log "Linked JDT LS runtime ${dest}/jre/temurin-25 -> ${jdk}"
+}
+link_embedded_jdtls_jre
+
 log "Installed under ${EXT_ROOT}:"
 ls -d "${EXT_ROOT}"/redhat.mta-* "${EXT_ROOT}"/redhat.java-* 2>/dev/null >&2 || log "(none yet)"
 
