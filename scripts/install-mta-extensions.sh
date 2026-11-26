@@ -13,39 +13,45 @@ VSIX_DIR="${MTA_VSIX_DIR:-/home/user/.mta-vsix}"
 EXT_ROOT="${CHECODE_EXTENSIONS_DIR:-/checode/remote/extensions}"
 mkdir -p "${VSIX_DIR}"
 
+log() { echo "$*" >&2; }
+
 if [[ ! -d "${EXT_ROOT}" ]]; then
-  echo "WARN: ${EXT_ROOT} not found yet (Che-Code not mounted). VSIX will be cached in ${VSIX_DIR} only." >&2
+  log "WARN: ${EXT_ROOT} not found yet (Che-Code not mounted). VSIX will be cached in ${VSIX_DIR} only."
 fi
 
+# Prints: <version><TAB><vsix-path> on stdout only.
 download_vsix() {
   local publisher="$1" name="$2"
   local out="${VSIX_DIR}/${publisher}.${name}.vsix"
-  local meta url ver
-  echo "Resolving Open VSX latest: ${publisher}.${name}"
+  local meta url ver tmp
+
+  log "Resolving Open VSX latest: ${publisher}.${name}"
   if ! meta="$(curl -fsSL --retry 3 --connect-timeout 20 --max-time 60 \
       "https://open-vsx.org/api/${publisher}/${name}/latest")"; then
-    echo "WARN: Open VSX metadata failed for ${publisher}.${name}" >&2
+    log "WARN: Open VSX metadata failed for ${publisher}.${name}"
     return 1
   fi
-  url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["files"]["download"])' <<<"${meta}")"
-  ver="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' <<<"${meta}")"
+  url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["files"]["download"])' <<<"${meta}")" || return 1
+  ver="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' <<<"${meta}")" || return 1
+
   if [[ ! -s "${out}" ]]; then
-    echo "Downloading ${url}"
-    local tmp="${out}.partial"
+    log "Downloading ${url}"
+    tmp="${out}.partial"
     if ! curl -fL --retry 3 --connect-timeout 20 --max-time 600 -o "${tmp}" "${url}"; then
-      echo "WARN: download failed for ${publisher}.${name}" >&2
+      log "WARN: download failed for ${publisher}.${name}"
       rm -f "${tmp}"
       return 1
     fi
-    if file "${tmp}" | grep -qi gzip; then
+    if command -v file >/dev/null 2>&1 && file "${tmp}" | grep -qi gzip; then
       mv "${tmp}" "${tmp}.gz"
       gunzip -f "${tmp}.gz" || true
+      [[ -f "${tmp}" ]] || { log "WARN: gunzip failed"; return 1; }
     fi
     mv -f "${tmp}" "${out}"
   else
-    echo "Using cached ${out}"
+    log "Using cached ${out}"
   fi
-  printf '%s %s\n' "${ver}" "${out}"
+  printf '%s\t%s\n' "${ver}" "${out}"
 }
 
 install_into_checode() {
@@ -53,29 +59,33 @@ install_into_checode() {
   if [[ ! -d "${EXT_ROOT}" ]]; then
     return 0
   fi
+  if [[ ! -f "${vsix}" ]]; then
+    log "WARN: VSIX file missing: ${vsix}"
+    return 1
+  fi
+
   local dest="${EXT_ROOT}/${publisher}.${name}-${ver}-universal"
   if [[ -f "${dest}/package.json" ]]; then
-    echo "Already installed: ${dest}"
+    log "Already installed: ${dest}"
   else
     local tmp
     tmp="$(mktemp -d)"
     if ! unzip -q "${vsix}" -d "${tmp}"; then
-      echo "WARN: unzip failed for ${vsix}" >&2
+      log "WARN: unzip failed for ${vsix}"
       rm -rf "${tmp}"
       return 1
     fi
     if [[ ! -f "${tmp}/extension/package.json" ]]; then
-      echo "WARN: unexpected VSIX layout in ${vsix}" >&2
+      log "WARN: unexpected VSIX layout in ${vsix}"
       rm -rf "${tmp}"
       return 1
     fi
     rm -rf "${dest}"
     mv "${tmp}/extension" "${dest}"
     rm -rf "${tmp}"
-    echo "Unpacked → ${dest}"
+    log "Unpacked → ${dest}"
   fi
 
-  # Register in Che-Code extensions.json (required for activation)
   python3 - "${EXT_ROOT}/extensions.json" "${publisher}" "${name}" "${ver}" "${dest}" <<'PY' || true
 import json, os, sys, time, uuid
 path, pub, name, ver, dest = sys.argv[1:6]
@@ -107,7 +117,7 @@ data.append({
 })
 with open(path, "w") as f:
     json.dump(data, f)
-print(f"Registered {ext_id}@{ver} ({len(data)} extensions total)")
+print(f"Registered {ext_id}@{ver} ({len(data)} extensions total)", file=sys.stderr)
 PY
 }
 
@@ -117,18 +127,19 @@ install_one() {
   if ! info="$(download_vsix "${publisher}" "${name}")"; then
     return 1
   fi
-  ver="$(echo "${info}" | awk '{print $1}')"
-  vsix="$(echo "${info}" | awk '{print $2}')"
+  ver="${info%%$'\t'*}"
+  vsix="${info#*$'\t'}"
   install_into_checode "${publisher}" "${name}" "${ver}" "${vsix}" || true
 }
 
+# Core pair required for "analysis providers are registered"
 install_one redhat mta-core || true
 install_one redhat mta-java || true
 install_one redhat mta-vscode-extension || true
 install_one redhat java || true
 install_one redhat vscode-xml || true
 
-echo "Installed under ${EXT_ROOT}:"
-ls -d "${EXT_ROOT}"/redhat.mta-* 2>/dev/null || echo "(none yet)"
-echo "Next: Command Palette → Developer: Reload Window"
+log "Installed under ${EXT_ROOT}:"
+ls -d "${EXT_ROOT}"/redhat.mta-* 2>/dev/null >&2 || log "(none yet)"
+log "Next: Command Palette → Developer: Reload Window"
 exit 0
