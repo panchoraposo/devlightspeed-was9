@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Aggregator POM so MTA Java activates in Dev Spaces.
+  redhat.mta-java activationEvents include workspaceContains:*/pom.xml
+  (one level under the repo root). Without this file, the sidebar stays on
+  "No analysis providers are registered" until a .java file is opened.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.acme.fsi</groupId>
+  <artifactId>was9-legacy-aggregator</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>WAS9 legacy apps (aggregator)</name>
+  <modules>
+    <module>fsi-accounts-was9-legacy</module>
+    <module>fsi-cards-was9-legacy</module>
+    <module>fsi-kyc-was9-legacy</module>
+  </modules>
+</project>

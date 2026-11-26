@@ -43,7 +43,7 @@ Or create a workspace from the Dev Spaces UI and select this repository (Devfile
 ### One-time setup
 
 1. Wait for `postStart` bootstrap (JDK + MTA CLI + VSIX download), or run **Bootstrap MTA CLI + JDK + VS Code settings**.
-2. **MTA extensions** — do **not** use the **Install Extension Pack** button (it often no-ops in Che-Code). `postStart` unpacks MTA Core + MTA Java into `/checode/remote/extensions`. When bootstrap finishes, run **Developer: Reload Window**. If the sidebar still says no providers, run Devfile command **Install MTA VS Code extensions**, then reload again.
+2. **MTA extensions** — do **not** use the **Install Extension Pack** button (it often no-ops in Che-Code). `postStart` unpacks MTA Core + MTA Java into `/checode/remote/extensions`. When bootstrap finishes, run **Developer: Reload Window**. `source-apps/pom.xml` exists so MTA Java auto-activates (providers register). If the sidebar still says no providers, open any `.java` file under `source-apps/`, or run **Install MTA VS Code extensions**, then reload again.
 3. Configure LLM: Command Palette → `MTA: Open the Gen AI model provider configuration file`.
 4. Optional Hub: set `HUB_URL` in the Devfile (no trailing space) or configure Hub in the MTA UI.
 
