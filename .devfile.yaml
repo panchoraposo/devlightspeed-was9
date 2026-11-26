@@ -34,11 +34,6 @@ components:
           value: "-Xmx1g"
         - name: MTA_HOME
           value: /home/user/mta
-        # Che-Code installs these .vsix files in the background (downloaded by postStart).
-        # Workaround for MTA UI "Install Extension Pack" doing nothing in the browser IDE.
-        # Docs: Automate / DEFAULT_EXTENSIONS in OpenShift Dev Spaces admin guide.
-        - name: DEFAULT_EXTENSIONS
-          value: /home/user/.mta-vsix/redhat.mta-core.vsix;/home/user/.mta-vsix/redhat.mta-java.vsix;/home/user/.mta-vsix/redhat.mta-vscode-extension.vsix;/home/user/.mta-vsix/redhat.java.vsix;/home/user/.mta-vsix/redhat.vscode-xml.vsix
         # Optional: override MTA Hub URL from secret storage (no trailing space).
         # - name: HUB_URL
         #   value: https://mta-openshift-mta.apps.example.com

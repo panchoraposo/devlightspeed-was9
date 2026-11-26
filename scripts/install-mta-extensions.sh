@@ -1,58 +1,134 @@
 #!/usr/bin/env bash
-# Download MTA / Java VS Code extensions as .vsix for Che-Code DEFAULT_EXTENSIONS.
+# Install MTA / Java VS Code extensions into Che-Code by unpacking Open VSX .vsix
+# files into /checode/remote/extensions and updating extensions.json.
+#
+# Why: In Dev Spaces (Che-Code browser IDE), the MTA webview "Install Extension Pack"
+# button often does nothing. `code-oss --install-extension` also refuses outside an
+# IDE terminal. Unpacking VSIX is the reliable path.
+#
 # Soft-fails (exit 0) so workspace postStart never blocks the IDE.
-# See: https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.31/html/administration_guide/assembly_configuring-vscode
 set -uo pipefail
 
 VSIX_DIR="${MTA_VSIX_DIR:-/home/user/.mta-vsix}"
+EXT_ROOT="${CHECODE_EXTENSIONS_DIR:-/checode/remote/extensions}"
 mkdir -p "${VSIX_DIR}"
 
-download_one() {
-  local publisher="$1"
-  local name="$2"
+if [[ ! -d "${EXT_ROOT}" ]]; then
+  echo "WARN: ${EXT_ROOT} not found yet (Che-Code not mounted). VSIX will be cached in ${VSIX_DIR} only." >&2
+fi
+
+download_vsix() {
+  local publisher="$1" name="$2"
   local out="${VSIX_DIR}/${publisher}.${name}.vsix"
-  if [[ -s "${out}" ]]; then
-    echo "Already present: ${out} ($(wc -c < "${out}") bytes)"
-    return 0
-  fi
+  local meta url ver
   echo "Resolving Open VSX latest: ${publisher}.${name}"
-  local meta url
   if ! meta="$(curl -fsSL --retry 3 --connect-timeout 20 --max-time 60 \
       "https://open-vsx.org/api/${publisher}/${name}/latest")"; then
     echo "WARN: Open VSX metadata failed for ${publisher}.${name}" >&2
     return 1
   fi
-  url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["files"]["download"])' <<<"${meta}" 2>/dev/null || true)"
-  if [[ -z "${url}" ]]; then
-    echo "WARN: no download URL for ${publisher}.${name}" >&2
-    return 1
+  url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["files"]["download"])' <<<"${meta}")"
+  ver="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' <<<"${meta}")"
+  if [[ ! -s "${out}" ]]; then
+    echo "Downloading ${url}"
+    local tmp="${out}.partial"
+    if ! curl -fL --retry 3 --connect-timeout 20 --max-time 600 -o "${tmp}" "${url}"; then
+      echo "WARN: download failed for ${publisher}.${name}" >&2
+      rm -f "${tmp}"
+      return 1
+    fi
+    if file "${tmp}" | grep -qi gzip; then
+      mv "${tmp}" "${tmp}.gz"
+      gunzip -f "${tmp}.gz" || true
+    fi
+    mv -f "${tmp}" "${out}"
+  else
+    echo "Using cached ${out}"
   fi
-  echo "Downloading ${url}"
-  local tmp="${out}.partial"
-  if ! curl -fL --retry 3 --connect-timeout 20 --max-time 600 -o "${tmp}" "${url}"; then
-    echo "WARN: download failed for ${publisher}.${name}" >&2
-    rm -f "${tmp}"
-    return 1
-  fi
-  # Open VSX sometimes returns gzip; normalize to .vsix
-  if file "${tmp}" | grep -qi 'gzip'; then
-    mv "${tmp}" "${tmp}.gz"
-    gunzip -f "${tmp}.gz" || true
-    [[ -f "${tmp}" ]] || mv "${tmp}.gz" "${tmp}" 2>/dev/null || true
-  fi
-  mv -f "${tmp}" "${out}"
-  echo "Saved ${out} ($(wc -c < "${out}") bytes)"
+  printf '%s %s\n' "${ver}" "${out}"
 }
 
-# Core MTA + Java language provider (needed for "analysis providers are registered")
-download_one redhat mta-core || true
-download_one redhat mta-java || true
-download_one redhat mta-vscode-extension || true
-# Helpful companion extensions
-download_one redhat java || true
-download_one redhat vscode-xml || true
+install_into_checode() {
+  local publisher="$1" name="$2" ver="$3" vsix="$4"
+  if [[ ! -d "${EXT_ROOT}" ]]; then
+    return 0
+  fi
+  local dest="${EXT_ROOT}/${publisher}.${name}-${ver}-universal"
+  if [[ -f "${dest}/package.json" ]]; then
+    echo "Already installed: ${dest}"
+  else
+    local tmp
+    tmp="$(mktemp -d)"
+    if ! unzip -q "${vsix}" -d "${tmp}"; then
+      echo "WARN: unzip failed for ${vsix}" >&2
+      rm -rf "${tmp}"
+      return 1
+    fi
+    if [[ ! -f "${tmp}/extension/package.json" ]]; then
+      echo "WARN: unexpected VSIX layout in ${vsix}" >&2
+      rm -rf "${tmp}"
+      return 1
+    fi
+    rm -rf "${dest}"
+    mv "${tmp}/extension" "${dest}"
+    rm -rf "${tmp}"
+    echo "Unpacked → ${dest}"
+  fi
 
-echo "VSIX directory listing:"
-ls -la "${VSIX_DIR}" || true
-echo "If extensions are not active yet: Command Palette → Developer: Reload Window"
+  # Register in Che-Code extensions.json (required for activation)
+  python3 - "${EXT_ROOT}/extensions.json" "${publisher}" "${name}" "${ver}" "${dest}" <<'PY' || true
+import json, os, sys, time, uuid
+path, pub, name, ver, dest = sys.argv[1:6]
+ext_id = f"{pub}.{name}"
+try:
+    data = json.load(open(path))
+    if not isinstance(data, list):
+        data = []
+except Exception:
+    data = []
+data = [e for e in data if e.get("identifier", {}).get("id") != ext_id]
+data.append({
+    "identifier": {"id": ext_id, "uuid": str(uuid.uuid4())},
+    "version": ver,
+    "location": {"$mid": 1, "path": dest, "scheme": "file"},
+    "relativeLocation": os.path.basename(dest),
+    "metadata": {
+        "installedTimestamp": int(time.time() * 1000),
+        "source": "vsix",
+        "id": str(uuid.uuid4()),
+        "publisherId": pub,
+        "publisherDisplayName": pub,
+        "targetPlatform": "universal",
+        "updated": False,
+        "private": False,
+        "isPreReleaseVersion": False,
+        "hasPreReleaseVersion": False,
+    },
+})
+with open(path, "w") as f:
+    json.dump(data, f)
+print(f"Registered {ext_id}@{ver} ({len(data)} extensions total)")
+PY
+}
+
+install_one() {
+  local publisher="$1" name="$2"
+  local info ver vsix
+  if ! info="$(download_vsix "${publisher}" "${name}")"; then
+    return 1
+  fi
+  ver="$(echo "${info}" | awk '{print $1}')"
+  vsix="$(echo "${info}" | awk '{print $2}')"
+  install_into_checode "${publisher}" "${name}" "${ver}" "${vsix}" || true
+}
+
+install_one redhat mta-core || true
+install_one redhat mta-java || true
+install_one redhat mta-vscode-extension || true
+install_one redhat java || true
+install_one redhat vscode-xml || true
+
+echo "Installed under ${EXT_ROOT}:"
+ls -d "${EXT_ROOT}"/redhat.mta-* 2>/dev/null || echo "(none yet)"
+echo "Next: Command Palette → Developer: Reload Window"
 exit 0
