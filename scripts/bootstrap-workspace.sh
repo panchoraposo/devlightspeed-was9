@@ -87,6 +87,7 @@ path, jdtls, project = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f:
     data = json.load(f)
 data["java.jdt.ls.java.home"] = jdtls
+data["java.server.launchMode"] = "Standard"
 runtimes = [
     {"name": "JavaSE-17", "path": project, "default": True},
     {"name": "JavaSE-25", "path": jdtls},
@@ -97,6 +98,42 @@ with open(path, "w") as f:
     f.write("\n")
 PY
 fi
+
+# Browser Dev Spaces forces Hybrid mode into Lightweight unless launchMode is
+# Standard in user or .code-workspace settings (folder .vscode settings are
+# easy to miss from the extension host).
+python3 - "${JDTLS_JDK_HOME}" <<'PY' || true
+import json, os, sys
+jdtls = sys.argv[1]
+user = "/checode/remote/data/User/settings.json"
+if os.path.isfile(user):
+    try:
+        data = json.load(open(user))
+    except Exception:
+        data = {}
+    data["java.jdt.ls.java.home"] = jdtls
+    data["java.server.launchMode"] = "Standard"
+    data["extensions.autoUpdate"] = False
+    data["extensions.autoCheckUpdates"] = False
+    with open(user, "w") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
+    print(f"Updated {user}")
+ws = "/projects/.code-workspace"
+if os.path.isfile(ws):
+    try:
+        data = json.load(open(ws))
+    except Exception:
+        data = {}
+    settings = data.get("settings") or {}
+    settings["java.server.launchMode"] = "Standard"
+    settings["java.jdt.ls.java.home"] = jdtls
+    data["settings"] = settings
+    with open(ws, "w") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
+    print(f"Updated {ws}")
+PY
 
 bash "${SCRIPTS}/install-mta-cli.sh" || true
 # Che-Code "Install Extension Pack" often no-ops; pre-download VSIX for DEFAULT_EXTENSIONS.
@@ -109,5 +146,5 @@ fi
 
 echo "Workspace bootstrap finished."
 echo "If Language Support for Java fails: verify /home/user/jdk-25/bin/java -version, then Reload Window."
-echo "If 'No analysis providers are registered': wait for VSIX install, then Reload Window (or run Install MTA VS Code extensions)."
+echo "If 'No analysis providers are registered': java.server.launchMode must be Standard, then Reload Window."
 exit 0

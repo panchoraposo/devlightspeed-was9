@@ -2,6 +2,7 @@
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.compile.nullAnalysis.mode": "disabled",
   "java.jdt.ls.java.home": "/home/user/jdk-25",
+  "java.server.launchMode": "Standard",
   "java.configuration.runtimes": [
     {
       "name": "JavaSE-17",
@@ -17,9 +18,6 @@
   "mta-vscode-extension.analyzerPath": "/home/user/mta/linux-mta-cli",
   "mta-core.genai.enabled": true,
   "mta-core.genai.agentMode": true,
-  "extensions.autoUpdate": false,
-  "extensions.autoCheckUpdates": false,
-  "extensions.ignoreRecommendations": false,
   "files.exclude": {
     "**/target": true,
     "**/.cache": true
