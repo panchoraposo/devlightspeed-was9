@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Workspace-root aggregator. The MTA analyzer treats the Dev Spaces workspace
+  folder as the analysis root. Without a pom.xml here the Java provider exits
+  with "unable to get build tool" (RPC status 2) before any rules run.
+  migrated-apps/ is intentionally not a module.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.acme.fsi</groupId>
+  <artifactId>devlightspeed-was9</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>WAS9 legacy workspace</name>
+  <modules>
+    <module>source-apps</module>
+  </modules>
+</project>
