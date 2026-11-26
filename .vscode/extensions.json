@@ -3,7 +3,9 @@
     "redhat.mta-vscode-extension",
     "redhat.mta-java",
     "redhat.mta-core",
-    "redhat.java",
     "redhat.vscode-xml"
+  ],
+  "unwantedRecommendations": [
+    "redhat.java"
   ]
 }

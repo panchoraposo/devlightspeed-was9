@@ -163,5 +163,21 @@ install_one redhat vscode-xml || true
 
 log "Installed under ${EXT_ROOT}:"
 ls -d "${EXT_ROOT}"/redhat.mta-* "${EXT_ROOT}"/redhat.java-* 2>/dev/null >&2 || log "(none yet)"
+
+# Hard assert: only the pinned Language Support for Java must be registered
+if [[ -d "${EXT_ROOT}" ]]; then
+  shopt -s nullglob
+  for d in "${EXT_ROOT}"/redhat.java-*; do
+    base="$(basename "${d}")"
+    if [[ "${base}" != "redhat.java-${JAVA_EXT_VERSION}-universal" ]]; then
+      log "Removing non-pinned Java extension dir: ${d}"
+      rm -rf "${d}"
+    fi
+  done
+  shopt -u nullglob
+  # Drop stale unpinned java.vsix cache that would reinstall "latest"
+  rm -f "${VSIX_DIR}/redhat.java.vsix" || true
+fi
+
 log "Next: Command Palette → Developer: Reload Window"
 exit 0
