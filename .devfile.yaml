@@ -54,6 +54,13 @@ commands:
       component: tools
       commandLine: bash scripts/install-jdk17.sh
       workingDir: ${PROJECT_SOURCE}
+  - id: install-jdk25
+    exec:
+      label: Install Temurin JDK 25 for Java language server
+      component: tools
+      commandLine: bash scripts/install-jdk25.sh
+      workingDir: ${PROJECT_SOURCE}
+
   - id: install-mta-cli
     exec:
       label: Install Linux MTA/Kantra CLI (into ~/mta)
@@ -89,14 +96,16 @@ commands:
       label: Print MTA / Lightspeed profile hint
       component: tools
       commandLine: |
-        echo "1) java -version must work (JAVA_HOME=/usr/lib/jvm/java-17-openjdk)"
-        echo "2) MTA extensions: wait for postStart VSIX download, or run 'Install MTA VS Code extensions', then Reload Window"
+        echo "1) Project java -version (JAVA_HOME=/usr/lib/jvm/java-17-openjdk); JDT LS needs ~/jdk-25"
+        echo "2) If Java extension says 'JDK 25 required': run 'Install Temurin JDK 25 for Java language server', Reload Window"
+        echo "3) MTA extensions: wait for postStart VSIX download, or run 'Install MTA VS Code extensions', then Reload Window"
         echo "   (Do not rely on the MTA 'Install Extension Pack' button — it often no-ops in Che-Code)"
-        echo "3) Run 'Install Linux MTA/Kantra CLI' if ~/mta/linux-mta-cli is missing (~700MB)"
-        echo "4) Analyze ONE folder under source-apps/ (e.g. source-apps/fsi-accounts-was9-legacy)"
-        echo "5) Do NOT analyze repo root or migrated-apps/ (already Quarkus)"
-        echo "6) Analysis profile: source=websphere, targets=quarkus,openjdk17"
-        echo "7) Configure LLM: MTA: Open the Gen AI model provider configuration file"
+        echo "4) Run 'Install Linux MTA/Kantra CLI' if ~/mta/linux-mta-cli is missing (~700MB)"
+        echo "5) Analyze ONE folder under source-apps/ (e.g. source-apps/fsi-accounts-was9-legacy)"
+        echo "6) Do NOT analyze repo root or migrated-apps/ (already Quarkus)"
+        echo "7) Analysis profile: source=websphere, targets=quarkus,openjdk17"
+        echo "8) Configure LLM: MTA: Open the Gen AI model provider configuration file"
+
       workingDir: ${PROJECT_SOURCE}
 events:
   postStart:

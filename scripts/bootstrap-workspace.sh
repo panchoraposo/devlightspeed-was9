@@ -8,6 +8,7 @@ if [[ -z "${ROOT}" ]]; then
 fi
 SCRIPTS="${ROOT}/scripts"
 JDK_HOME="${JDK_HOME:-/home/user/jdk-17}"
+JDTLS_JDK_HOME="${JDTLS_JDK_HOME:-/home/user/jdk-25}"
 
 echo "Bootstrapping Dev Spaces workspace from ${ROOT}"
 
@@ -57,7 +58,7 @@ if [[ -z "${JAVA_RESOLVED}" ]]; then
   JAVA_RESOLVED="$(resolve_java_home || true)"
 fi
 if [[ -n "${JAVA_RESOLVED}" ]]; then
-  echo "Resolved JAVA_HOME=${JAVA_RESOLVED}"
+  echo "Resolved project JAVA_HOME=${JAVA_RESOLVED}"
   "${JAVA_RESOLVED}/bin/java" -version 2>&1 || true
   mkdir -p /home/user/.local/bin
   ln -sfn "${JAVA_RESOLVED}/bin/java" /home/user/.local/bin/java || true
@@ -72,25 +73,29 @@ EOF
   else
     sed -i "s|^export JAVA_HOME=.*|export JAVA_HOME=\"${JAVA_RESOLVED}\"|" /home/user/.bashrc || true
   fi
-  if [[ -f "${ROOT}/.vscode/settings.json" ]] && command -v python3 >/dev/null 2>&1; then
-    python3 - "${ROOT}/.vscode/settings.json" "${JAVA_RESOLVED}" <<'PY' || true
+else
+  echo "WARN: no project JDK found. Run: bash scripts/install-jdk17.sh" >&2
+fi
+
+# vscode-java 1.58+ needs JDK 25+ to run JDT LS; projects stay on Java 17.
+bash "${SCRIPTS}/install-jdk25.sh" || true
+if [[ -x "${JDTLS_JDK_HOME}/bin/java" && -f "${ROOT}/.vscode/settings.json" ]] && command -v python3 >/dev/null 2>&1; then
+  echo "Pointing java.jdt.ls.java.home at ${JDTLS_JDK_HOME}"
+  python3 - "${ROOT}/.vscode/settings.json" "${JDTLS_JDK_HOME}" "${JAVA_RESOLVED:-/usr/lib/jvm/java-17-openjdk}" <<'PY' || true
 import json, sys
-path, jhome = sys.argv[1], sys.argv[2]
+path, jdtls, project = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f:
     data = json.load(f)
-data["java.jdt.ls.java.home"] = jhome
-data["java.configuration.runtimes"] = [{
-    "name": "JavaSE-17",
-    "path": jhome,
-    "default": True,
-}]
+data["java.jdt.ls.java.home"] = jdtls
+runtimes = [
+    {"name": "JavaSE-17", "path": project, "default": True},
+    {"name": "JavaSE-25", "path": jdtls},
+]
+data["java.configuration.runtimes"] = runtimes
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
 PY
-  fi
-else
-  echo "WARN: no JDK found. Run: bash scripts/install-jdk17.sh" >&2
 fi
 
 bash "${SCRIPTS}/install-mta-cli.sh" || true
@@ -103,6 +108,6 @@ if [[ -x /home/user/mta/linux-mta-cli ]]; then
 fi
 
 echo "Workspace bootstrap finished."
-echo "If MTA still says Java is missing: open a new terminal, verify 'java -version', then Reload Window."
+echo "If Language Support for Java fails: verify /home/user/jdk-25/bin/java -version, then Reload Window."
 echo "If 'No analysis providers are registered': wait for VSIX install, then Reload Window (or run Install MTA VS Code extensions)."
 exit 0

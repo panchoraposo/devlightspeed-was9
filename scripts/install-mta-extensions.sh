@@ -11,8 +11,8 @@ set -uo pipefail
 
 VSIX_DIR="${MTA_VSIX_DIR:-/home/user/.mta-vsix}"
 EXT_ROOT="${CHECODE_EXTENSIONS_DIR:-/checode/remote/extensions}"
-# Pin Language Support for Java: Open VSX "latest" (1.59+) requires JDK 25+.
-# Dev Spaces UDI / this Devfile use Java 17.
+# Pin Language Support for Java for predictability. JDT LS still needs JDK 25+
+# at java.jdt.ls.java.home (see scripts/install-jdk25.sh); projects stay on 17.
 JAVA_EXT_VERSION="${MTA_JAVA_EXT_VERSION:-1.58.0}"
 mkdir -p "${VSIX_DIR}"
 

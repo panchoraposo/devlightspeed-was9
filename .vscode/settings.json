@@ -1,12 +1,16 @@
 {
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.compile.nullAnalysis.mode": "disabled",
-  "java.jdt.ls.java.home": "/usr/lib/jvm/java-17-openjdk",
+  "java.jdt.ls.java.home": "/home/user/jdk-25",
   "java.configuration.runtimes": [
     {
       "name": "JavaSE-17",
       "path": "/usr/lib/jvm/java-17-openjdk",
       "default": true
+    },
+    {
+      "name": "JavaSE-25",
+      "path": "/home/user/jdk-25"
     }
   ],
   "mta-core.analyzerPath": "/home/user/mta/linux-mta-cli",
