@@ -94,6 +94,8 @@ else
 fi
 
 bash "${SCRIPTS}/install-mta-cli.sh" || true
+# Che-Code "Install Extension Pack" often no-ops; pre-download VSIX for DEFAULT_EXTENSIONS.
+bash "${SCRIPTS}/install-mta-extensions.sh" || true
 
 mkdir -p /home/user/.local/bin
 if [[ -x /home/user/mta/linux-mta-cli ]]; then
@@ -102,4 +104,5 @@ fi
 
 echo "Workspace bootstrap finished."
 echo "If MTA still says Java is missing: open a new terminal, verify 'java -version', then Reload Window."
+echo "If 'No analysis providers are registered': wait for VSIX install, then Reload Window (or run Install MTA VS Code extensions)."
 exit 0

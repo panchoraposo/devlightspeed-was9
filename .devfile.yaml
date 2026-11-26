@@ -34,6 +34,11 @@ components:
           value: "-Xmx1g"
         - name: MTA_HOME
           value: /home/user/mta
+        # Che-Code installs these .vsix files in the background (downloaded by postStart).
+        # Workaround for MTA UI "Install Extension Pack" doing nothing in the browser IDE.
+        # Docs: Automate / DEFAULT_EXTENSIONS in OpenShift Dev Spaces admin guide.
+        - name: DEFAULT_EXTENSIONS
+          value: /home/user/.mta-vsix/redhat.mta-core.vsix;/home/user/.mta-vsix/redhat.mta-java.vsix;/home/user/.mta-vsix/redhat.mta-vscode-extension.vsix;/home/user/.mta-vsix/redhat.java.vsix;/home/user/.mta-vsix/redhat.vscode-xml.vsix
         # Optional: override MTA Hub URL from secret storage (no trailing space).
         # - name: HUB_URL
         #   value: https://mta-openshift-mta.apps.example.com
@@ -60,6 +65,12 @@ commands:
       component: tools
       commandLine: bash scripts/install-mta-cli.sh
       workingDir: ${PROJECT_SOURCE}
+  - id: install-mta-extensions
+    exec:
+      label: Install MTA VS Code extensions (download VSIX)
+      component: tools
+      commandLine: bash scripts/install-mta-extensions.sh
+      workingDir: ${PROJECT_SOURCE}
   - id: package-accounts
     exec:
       label: Maven package fsi-accounts-was9-legacy
@@ -84,7 +95,8 @@ commands:
       component: tools
       commandLine: |
         echo "1) java -version must work (JAVA_HOME=/usr/lib/jvm/java-17-openjdk)"
-        echo "2) Install MTA Core + MTA Java extensions, then Reload Window"
+        echo "2) MTA extensions: wait for postStart VSIX download, or run 'Install MTA VS Code extensions', then Reload Window"
+        echo "   (Do not rely on the MTA 'Install Extension Pack' button — it often no-ops in Che-Code)"
         echo "3) Run 'Install Linux MTA/Kantra CLI' if ~/mta/linux-mta-cli is missing (~700MB)"
         echo "4) Analyze ONE folder under source-apps/ (e.g. source-apps/fsi-accounts-was9-legacy)"
         echo "5) Do NOT analyze repo root or migrated-apps/ (already Quarkus)"
