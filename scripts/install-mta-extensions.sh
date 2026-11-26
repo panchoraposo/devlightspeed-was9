@@ -11,6 +11,9 @@ set -uo pipefail
 
 VSIX_DIR="${MTA_VSIX_DIR:-/home/user/.mta-vsix}"
 EXT_ROOT="${CHECODE_EXTENSIONS_DIR:-/checode/remote/extensions}"
+# Pin Language Support for Java: Open VSX "latest" (1.59+) requires JDK 25+.
+# Dev Spaces UDI / this Devfile use Java 17.
+JAVA_EXT_VERSION="${MTA_JAVA_EXT_VERSION:-1.58.0}"
 mkdir -p "${VSIX_DIR}"
 
 log() { echo "$*" >&2; }
@@ -19,16 +22,34 @@ if [[ ! -d "${EXT_ROOT}" ]]; then
   log "WARN: ${EXT_ROOT} not found yet (Che-Code not mounted). VSIX will be cached in ${VSIX_DIR} only."
 fi
 
+# Remove Language Support for Java builds that need JDK 25+
+if [[ -d "${EXT_ROOT}" ]]; then
+  shopt -s nullglob
+  for d in "${EXT_ROOT}"/redhat.java-1.59*; do
+    log "Removing JDK25+ Java extension: ${d}"
+    rm -rf "${d}"
+  done
+  shopt -u nullglob
+fi
+
+# Args: publisher name [version]
 # Prints: <version><TAB><vsix-path> on stdout only.
 download_vsix() {
-  local publisher="$1" name="$2"
-  local out="${VSIX_DIR}/${publisher}.${name}.vsix"
-  local meta url ver tmp
+  local publisher="$1" name="$2" pinned="${3:-}"
+  local out meta url ver tmp api
 
-  log "Resolving Open VSX latest: ${publisher}.${name}"
-  if ! meta="$(curl -fsSL --retry 3 --connect-timeout 20 --max-time 60 \
-      "https://open-vsx.org/api/${publisher}/${name}/latest")"; then
-    log "WARN: Open VSX metadata failed for ${publisher}.${name}"
+  if [[ -n "${pinned}" ]]; then
+    api="https://open-vsx.org/api/${publisher}/${name}/${pinned}"
+    out="${VSIX_DIR}/${publisher}.${name}-${pinned}.vsix"
+    log "Resolving Open VSX ${publisher}.${name}@${pinned}"
+  else
+    api="https://open-vsx.org/api/${publisher}/${name}/latest"
+    out="${VSIX_DIR}/${publisher}.${name}.vsix"
+    log "Resolving Open VSX latest: ${publisher}.${name}"
+  fi
+
+  if ! meta="$(curl -fsSL --retry 3 --connect-timeout 20 --max-time 60 "${api}")"; then
+    log "WARN: Open VSX metadata failed for ${publisher}.${name}${pinned:+@$pinned}"
     return 1
   fi
   url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["files"]["download"])' <<<"${meta}")" || return 1
@@ -122,9 +143,9 @@ PY
 }
 
 install_one() {
-  local publisher="$1" name="$2"
+  local publisher="$1" name="$2" pinned="${3:-}"
   local info ver vsix
-  if ! info="$(download_vsix "${publisher}" "${name}")"; then
+  if ! info="$(download_vsix "${publisher}" "${name}" "${pinned}")"; then
     return 1
   fi
   ver="${info%%$'\t'*}"
@@ -136,10 +157,11 @@ install_one() {
 install_one redhat mta-core || true
 install_one redhat mta-java || true
 install_one redhat mta-vscode-extension || true
-install_one redhat java || true
+# MUST pin: latest Language Support for Java needs JDK 25+
+install_one redhat java "${JAVA_EXT_VERSION}" || true
 install_one redhat vscode-xml || true
 
 log "Installed under ${EXT_ROOT}:"
-ls -d "${EXT_ROOT}"/redhat.mta-* 2>/dev/null >&2 || log "(none yet)"
+ls -d "${EXT_ROOT}"/redhat.mta-* "${EXT_ROOT}"/redhat.java-* 2>/dev/null >&2 || log "(none yet)"
 log "Next: Command Palette → Developer: Reload Window"
 exit 0
