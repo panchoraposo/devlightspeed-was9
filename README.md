@@ -2,15 +2,21 @@
 
 Standalone demo repo with **only** WebSphere/Open Liberty (WAS9) FSI apps so MTA analysis is not mixed with EAP / Spring Boot / Fuse samples.
 
-## Apps
+## Layout
+
+| Path | Purpose |
+|------|---------|
+| [`source-apps/`](source-apps/) | **Legacy apps to analyze** (single copy — use these in MTA) |
+| [`migrated-apps/`](migrated-apps/) | Red Hat Build of Quarkus 3 “after” targets (do not analyze) |
+| [`.devfile.yaml`](.devfile.yaml) | OpenShift Dev Spaces workspace |
+
+### Legacy (`source-apps/`)
 
 | App | Path |
 |-----|------|
-| Accounts (REST + EJB/JPA/JNDI bait) | [`apps/fsi-accounts-was9-legacy`](apps/fsi-accounts-was9-legacy) |
-| Cards (REST + JMS/MDB bait) | [`apps/fsi-cards-was9-legacy`](apps/fsi-cards-was9-legacy) |
-| KYC (JAX-WS/JAXB bait) | [`apps/fsi-kyc-was9-legacy`](apps/fsi-kyc-was9-legacy) |
-
-Pristine copies: [`source-apps/`](source-apps/).
+| Accounts (REST + EJB/JPA/JNDI bait) | [`source-apps/fsi-accounts-was9-legacy`](source-apps/fsi-accounts-was9-legacy) |
+| Cards (REST + JMS/MDB bait) | [`source-apps/fsi-cards-was9-legacy`](source-apps/fsi-cards-was9-legacy) |
+| KYC (JAX-WS/JAXB bait) | [`source-apps/fsi-kyc-was9-legacy`](source-apps/fsi-kyc-was9-legacy) |
 
 ### Migrated (Red Hat Build of Quarkus 3)
 
@@ -48,7 +54,7 @@ Or create a workspace from the Dev Spaces UI and select this repository (Devfile
 | Source | `websphere` |
 | Targets | `quarkus`, `openjdk17` |
 
-**Analyze one app folder at a time**, for example `apps/fsi-accounts-was9-legacy` — not the repo root.
+**Analyze one folder under `source-apps/`**, for example `source-apps/fsi-accounts-was9-legacy`. Do not analyze the repo root or `migrated-apps/`.
 
 ## Local clone
 

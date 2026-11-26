@@ -2,7 +2,7 @@ schemaVersion: 2.2.0
 metadata:
   name: mta-was9-lightspeed
   displayName: MTA WAS9 → Quarkus (Developer Lightspeed)
-  description: Analyze WAS9/Liberty FSI apps with MTA and fix issues with Developer Lightspeed in OpenShift Dev Spaces
+  description: Analyze WAS9/Liberty FSI apps under source-apps/ with MTA and Developer Lightspeed in OpenShift Dev Spaces
   tags: [Java, MTA, Lightspeed, WebSphere, Quarkus]
   projectType: java
 components:
@@ -64,19 +64,19 @@ commands:
     exec:
       label: Maven package fsi-accounts-was9-legacy
       component: tools
-      commandLine: mvn -q -f apps/fsi-accounts-was9-legacy/pom.xml package
+      commandLine: mvn -q -f source-apps/fsi-accounts-was9-legacy/pom.xml package
       workingDir: ${PROJECT_SOURCE}
   - id: package-cards
     exec:
       label: Maven package fsi-cards-was9-legacy
       component: tools
-      commandLine: mvn -q -f apps/fsi-cards-was9-legacy/pom.xml package
+      commandLine: mvn -q -f source-apps/fsi-cards-was9-legacy/pom.xml package
       workingDir: ${PROJECT_SOURCE}
   - id: package-kyc
     exec:
       label: Maven package fsi-kyc-was9-legacy
       component: tools
-      commandLine: mvn -q -f apps/fsi-kyc-was9-legacy/pom.xml package
+      commandLine: mvn -q -f source-apps/fsi-kyc-was9-legacy/pom.xml package
       workingDir: ${PROJECT_SOURCE}
   - id: mta-hint
     exec:
@@ -86,9 +86,10 @@ commands:
         echo "1) java -version must work (JAVA_HOME=/usr/lib/jvm/java-17-openjdk)"
         echo "2) Install MTA Core + MTA Java extensions, then Reload Window"
         echo "3) Run 'Install Linux MTA/Kantra CLI' if ~/mta/linux-mta-cli is missing (~700MB)"
-        echo "4) Analyze ONE app folder (e.g. apps/fsi-accounts-was9-legacy)"
-        echo "5) Analysis profile: source=websphere, targets=quarkus,openjdk17"
-        echo "6) Configure LLM: MTA: Open the Gen AI model provider configuration file"
+        echo "4) Analyze ONE folder under source-apps/ (e.g. source-apps/fsi-accounts-was9-legacy)"
+        echo "5) Do NOT analyze repo root or migrated-apps/ (already Quarkus)"
+        echo "6) Analysis profile: source=websphere, targets=quarkus,openjdk17"
+        echo "7) Configure LLM: MTA: Open the Gen AI model provider configuration file"
       workingDir: ${PROJECT_SOURCE}
 events:
   postStart:
